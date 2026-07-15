@@ -7,30 +7,30 @@ import { LoginPage } from "../PageObjects/LoginPage";
 import { ProductDetailPage } from "../PageObjects/ProductDetailPage";
 import { UsersPage } from "../PageObjects/UsersPage";
 import { CommonFunctions } from "../utils/CommonFunctions";
+import { HeaderPanel } from "../PageObjects/HeaderPanel";
 
 // ─── 1. View Product Details ──────────────────────────────────────────────────
+
+const commonFunctions = new CommonFunctions();
+const token = commonFunctions.getAuthToken(
+  "playwright/.auth/practicesoftwaretesting-state.json",
+);
 
 test.describe("1. View Product Details", () => {
   test("access a product and view its details", async ({ page }) => {
     const handToolsPage = new HandToolsPage(page);
     const productDetailPage = new ProductDetailPage(page);
-    const commonFunctions = new CommonFunctions();
-    const token = commonFunctions.getAuthToken(
-      "playwright/.auth/practicesoftwaretesting-state.json",
-    );
 
-    if (!token) {
-      throw new Error("Bearer token not found!");
-    }
-
-    
-    await handToolsPage.goto();
+    await page.goto("/");
+    const headerPanel = new HeaderPanel(page);
+    await headerPanel.categoriesMenuButton.click();
+    await headerPanel.handToolsMenuButton.click();
     await handToolsPage.clickProduct("Combination Pliers");
 
     //extract the product ID from the URL
     const itemId = page.url().split("/").pop();
 
-    //this is an API call to get the product details from the backend using the product ID and the Bearer token for authentication
+    //API test- to get the product details from the backend using the product ID and the Bearer token for authentication
     const response = await page.request.get(
       `https://api.practicesoftwaretesting.com/products/${itemId}`,
       {
@@ -49,9 +49,7 @@ test.describe("1. View Product Details", () => {
     await expect(productDetailPage.productDescription).toContainText(
       itemFromAPI.description,
     );
-    await expect(productDetailPage.productPrice).toContainText(
-      `14.15`,
-    );
+    await expect(productDetailPage.productPrice).toContainText(`14.15`);
     await expect(productDetailPage.addToCartButton).toBeVisible();
   });
 });
@@ -66,8 +64,10 @@ test.describe("2. View invoice after purchase", () => {
     const productDetailPage = new ProductDetailPage(page);
     const cartPage = new CartPage(page);
     const checkoutPage = new CheckoutPage(page);
-
-    await handToolsPage.goto();
+    const headerPanel = new HeaderPanel(page);
+    await page.goto("/");
+    await headerPanel.categoriesMenuButton.click();
+    await headerPanel.handToolsMenuButton.click();
     await handToolsPage.clickProduct("Combination Pliers");
     await productDetailPage.addToCartButton.click();
     await expect(productDetailPage.productAddedToCartMessage).toHaveText(
@@ -86,14 +86,11 @@ test.describe("2. View invoice after purchase", () => {
     const commonFunctions = new CommonFunctions();
     const streetName =
       "street-" + (await commonFunctions.generateStreetName(10));
-
-
-      //clearing pre populated street name
-    await page.waitForTimeout(2000);
+      await page.waitForTimeout(500); 
+    //clearing pre populated street name
     await checkoutPage.street.press("ControlOrMeta+A");
-
+await page.waitForTimeout(500); 
     await checkoutPage.street.press("Backspace");
-    await page.waitForTimeout(2000);
     await checkoutPage.street.pressSequentially(streetName, { delay: 100 });
     await checkoutPage.proceedToCheckoutButtonThree.click();
     await expect(page.getByRole("heading", { name: "Payment" })).toBeVisible();
@@ -103,11 +100,11 @@ test.describe("2. View invoice after purchase", () => {
       "Payment was successful",
     );
     await checkoutPage.confirmButton.click();
-    await page.waitForTimeout(2000);
     //extracting invoice number
     const invoiceNumber = await checkoutPage.invoiceNumber.textContent();
-    await checkoutPage.profileMenuButton.click();
-    await checkoutPage.dashboardMenuButton.click();
+    
+    await headerPanel.profileMenuButton.click();
+    await headerPanel.dashboardMenuButton.click();
 
     await page.waitForLoadState("networkidle");
 
@@ -116,13 +113,12 @@ test.describe("2. View invoice after purchase", () => {
     await expect(firstRow).toBeVisible({ timeout: 10000 });
 
     const targetRow = page.locator("table.table tbody tr", {
-      hasText: invoiceNumber!,
+      hasText: invoiceNumber ?? undefined,
     });
 
-    await page.waitForTimeout(2000);
     await expect(targetRow).toBeVisible();
     await expect(targetRow).toContainText(streetName);
-//asserting the invoice number initially presented is same as the one in the dashboard table
+    //asserting the invoice number initially presented is same as the one in the dashboard table
     await expect(page.locator("table.table tbody tr").first()).toContainText(
       invoiceNumber!,
     );
@@ -136,20 +132,39 @@ test.describe("3. Filter products and pagination", () => {
     page,
   }) => {
     const handToolsPage = new HandToolsPage(page);
-    await handToolsPage.goto();
-    await page.waitForTimeout(2000);
+    const headerPanel = new HeaderPanel(page);
+    await page.goto("/");
+    await headerPanel.categoriesMenuButton.click();
+    await headerPanel.handToolsMenuButton.click();
 
     //these are items before filter is applied
     const initialNames = await page
       .locator(".card .card-title")
       .allTextContents();
 
+    //trigger a promise to wait for the API response when the filter is applied
+    const responsePromise = page.waitForResponse(
+      (response) =>
+        response.url().includes("/products") &&
+        response.request().method() === "QUERY",
+    );
+
+    //apply the filter
     await handToolsPage.toggleCheckboxByLabel("Hand Saw", true);
-    await page.waitForTimeout(2000);
 
     const filteredItems = await page.locator(".card").all();
     for (const item of filteredItems) {
       await expect(item.locator(".card-body")).toContainText("Saw");
+    }
+
+    //API test- to verify that the filtered items match the backend API response for the same filter
+    const response = await responsePromise;
+    const filteredItemsFromAPI = await response.json();
+    const apiProducts = filteredItemsFromAPI.data;
+    for (let i = 0; i < filteredItems.length; i += 1) {
+      await expect(filteredItems[i].locator(".card-body")).toContainText(
+        apiProducts[i].name,
+      );
     }
 
     await handToolsPage.toggleCheckboxByLabel("Hand Saw", false);
@@ -173,14 +188,12 @@ test.describe("3. Filter products and pagination", () => {
     });
     await expect(prevButtonContainer).toContainClass("disabled");
     await handToolsPage.pagination_nextButton.click();
-    await page.waitForTimeout(2000);
     const namesOnNextPage = await page
       .locator(".card .card-title")
       .allTextContents();
     expect(namesOnNextPage).not.toEqual(initialNames);
     await expect(prevButtonContainer).not.toContainClass("disabled");
     await handToolsPage.pagination_prevButton.click();
-    await page.waitForTimeout(2000);
     expect(await page.locator(".card .card-title").allTextContents()).toEqual(
       initialNames,
     );
@@ -195,6 +208,7 @@ test.describe("4. Add a user and login as the user", () => {
   }) => {
     const usersPage = new UsersPage(page);
     const loginPage = new LoginPage(page);
+    const headerPanel = new HeaderPanel(page);
     const commonFunctions = new CommonFunctions();
 
     const randomValue = await commonFunctions.generateStreetName(10);
@@ -202,8 +216,9 @@ test.describe("4. Add a user and login as the user", () => {
     const password = `User@${randomValue}!`;
     const firstName = `new${randomValue}`;
     const lastName = `user`;
-
-    await usersPage.goto();
+    await page.goto("/");
+    await headerPanel.profileMenuButton.click();
+    await headerPanel.userMenuButton.click();
     await usersPage.addUserButton.click();
     await usersPage.addUser(
       firstName,
@@ -222,9 +237,7 @@ test.describe("4. Add a user and login as the user", () => {
     await page.waitForLoadState("networkidle");
     await usersPage.profileMenuButton.click();
     await usersPage.signOutButton.click();
-    await page.waitForTimeout(2000);
     await loginPage.goto();
-    await page.waitForTimeout(2000);
 
     //login with wrong password and verify that login fails
     await loginPage.login(email, "wrongpassword");
@@ -235,15 +248,13 @@ test.describe("4. Add a user and login as the user", () => {
     await expect(page).toHaveURL(/account/);
 
     const accountPage = new AccountPage(page);
-    await expect(accountPage.profileMenuButton).toContainText(firstName);
-    await accountPage.profileMenuButton.click();
-    await accountPage.myProfileMenuButton.click();
+    await expect(headerPanel.profileMenuButton).toContainText(firstName);
+    await headerPanel.profileMenuButton.click();
+    await headerPanel.myProfileMenuButton.click();
     await expect(accountPage.firstName).toHaveValue(firstName);
     await accountPage.firstName.fill(`updated${firstName}`);
     await accountPage.updateProfile.click();
-    await page.waitForTimeout(2000);
     await page.reload();
-    await page.waitForTimeout(2000);
     await expect(accountPage.firstName).toHaveValue(`updated${firstName}`);
   });
 });

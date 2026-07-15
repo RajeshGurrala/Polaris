@@ -45,10 +45,6 @@ export class UsersPage {
     this.toastMessage = page.locator("[data-test='toast-message']");
   }
 
-  async goto() {
-    await this.page.goto("/admin/users");
-  }
-
   async addUser(
     firstName: string,
     lastName: string,

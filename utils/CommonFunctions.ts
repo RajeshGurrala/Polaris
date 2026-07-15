@@ -5,8 +5,8 @@ export class CommonFunctions {
     return Math.random().toString(20).substring(2, length);
   }
 
-  getAuthToken(stateFilePath: string): string {
-  const state = JSON.parse(readFileSync(stateFilePath, "utf-8"));
-  const items = state.origins?.flatMap((o: any) => o.localStorage) ?? [];
-  return items.find((i: any) => i.name === "auth-token")?.value ?? "";
+getAuthToken(storageStateFilePath: string): string {
+  const storageState = JSON.parse(readFileSync(storageStateFilePath, "utf-8"));
+  const tokenItem = storageState.origins?.[0]?.localStorage?.find((i: any) => i.name === "auth-token");
+  return tokenItem.value;
 }}

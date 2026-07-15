@@ -11,16 +11,29 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
   use: {
+    baseURL: process.env.URL || "https://practicesoftwaretesting.com/",
     trace: "on-first-retry",
     headless: false,
+    launchOptions: {
+      slowMo: 350,
+    },
   },
+   
   projects: [
     {
-      name: "standardURL",
+      name: "standard",
       use: {
         ...devices["Desktop Chrome"],
         baseURL: "https://practicesoftwaretesting.com/",
         storageState: "playwright/.auth/practicesoftwaretesting-state.json",
+      },
+    },
+    {
+      name: "buggy",
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: "https://with-bugs.practicesoftwaretesting.com/",
+        storageState: "playwright/.auth/with-bugs-state.json",
       },
     },
   ],

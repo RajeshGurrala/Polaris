@@ -11,10 +11,6 @@ export class HandToolsPage {
   
   }
 
-  async goto() {
-    await this.page.goto("/category/hand-tools");
-  }
-
   async clickProduct(itemName: string) {
     await this.page.getByText(`${itemName}`).click();
   }

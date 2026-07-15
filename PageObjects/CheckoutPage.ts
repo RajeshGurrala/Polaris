@@ -9,8 +9,6 @@ export class CheckoutPage {
   readonly confirmButton: Locator;
   readonly paymentSuccesfulMessage: Locator;
   readonly invoiceNumber: Locator;
-  readonly profileMenuButton: Locator;
-  readonly dashboardMenuButton: Locator;
 
   constructor(readonly page: Page) {
     this.postCode = page.locator("[data-test='postal_code']");
@@ -23,7 +21,5 @@ export class CheckoutPage {
       "[data-test='payment-success-message']",
     );
     this.invoiceNumber = page.locator("[id='order-confirmation'] span");
-    this.profileMenuButton = page.locator("[id='menu']");
-    this.dashboardMenuButton = page.locator("[data-test='nav-admin-dashboard']");
   }
 }
