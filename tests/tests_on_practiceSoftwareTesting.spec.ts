@@ -67,8 +67,15 @@ test.describe("2. View invoice after purchase", () => {
     const headerPanel = new HeaderPanel(page);
     await page.goto("/");
     await headerPanel.categoriesMenuButton.click();
+    const responsePromise= page.waitForResponse(response=>response.url().includes("/products") && response.request().method()==="QUERY")
     await headerPanel.handToolsMenuButton.click();
-    await handToolsPage.clickProduct("Combination Pliers");
+    await page.locator(".card .card-title").first().waitFor()
+    const response= await responsePromise
+    const handToolsFromAPIResponse= await response.json()
+    const handToolsOnPage= await page.locator(".card .card-title").all()
+for(let i=0;i<handToolsOnPage.length;i+=1){
+ expect(handToolsOnPage[i]).toContainText(handToolsFromAPIResponse.data[i].name)}
+    await handToolsPage.clickProduct(handToolsFromAPIResponse.data[0].name);
     await productDetailPage.addToCartButton.click();
     await expect(productDetailPage.productAddedToCartMessage).toHaveText(
       "Product added to shopping cart.",
@@ -85,13 +92,12 @@ test.describe("2. View invoice after purchase", () => {
     await checkoutPage.houseNumber.fill("1");
     const commonFunctions = new CommonFunctions();
     const streetName =
-      "street-" + (await commonFunctions.generateStreetName(10));
-      await page.waitForTimeout(500); 
+      "street - "+ (await commonFunctions.generateStreetName(10));
+
     //clearing pre populated street name
-    await checkoutPage.street.press("ControlOrMeta+A");
-await page.waitForTimeout(500); 
-    await checkoutPage.street.press("Backspace");
-    await checkoutPage.street.pressSequentially(streetName, { delay: 100 });
+    await page.waitForTimeout(500);
+    await checkoutPage.street.fill("");
+    await checkoutPage.street.pressSequentially(streetName, { delay: 150 });
     await checkoutPage.proceedToCheckoutButtonThree.click();
     await expect(page.getByRole("heading", { name: "Payment" })).toBeVisible();
     await checkoutPage.paymentMethod.selectOption("Cash on Delivery");
@@ -136,22 +142,25 @@ test.describe("3. Filter products and pagination", () => {
     await page.goto("/");
     await headerPanel.categoriesMenuButton.click();
     await headerPanel.handToolsMenuButton.click();
+    await expect(page.locator(".card-title")).not.toHaveCount(0);
+    await expect(page.locator(".pagination")).toBeVisible();
+  
 
     //these are items before filter is applied
     const initialNames = await page
-      .locator(".card .card-title")
+      .locator(".card-title")
       .allTextContents();
 
     //trigger a promise to wait for the API response when the filter is applied
     const responsePromise = page.waitForResponse(
-      (response) =>
+      response =>
         response.url().includes("/products") &&
         response.request().method() === "QUERY",
     );
 
     //apply the filter
     await handToolsPage.toggleCheckboxByLabel("Hand Saw", true);
-
+    await expect(page.locator(".card-title").first()).toHaveText(/Saw/);
     const filteredItems = await page.locator(".card").all();
     for (const item of filteredItems) {
       await expect(item.locator(".card-body")).toContainText("Saw");
@@ -161,6 +170,7 @@ test.describe("3. Filter products and pagination", () => {
     const response = await responsePromise;
     const filteredItemsFromAPI = await response.json();
     const apiProducts = filteredItemsFromAPI.data;
+    console.log(apiProducts)
     for (let i = 0; i < filteredItems.length; i += 1) {
       await expect(filteredItems[i].locator(".card-body")).toContainText(
         apiProducts[i].name,
@@ -183,17 +193,21 @@ test.describe("3. Filter products and pagination", () => {
     await expect(footer).toBeInViewport();
 
     //checks pagination works
-    const prevButtonContainer = page.locator("li", {
-      has: page.locator('[data-test="pagination-prev"]'),
-    });
-    await expect(prevButtonContainer).toContainClass("disabled");
+   
+    await expect(page.locator("[class='page-item disabled']")).toBeVisible();
     await handToolsPage.pagination_nextButton.click();
+     await expect(page.locator(".card-title").first()).not.toHaveText(initialNames[0]);
+    
+     // wait for the next page to load
     const namesOnNextPage = await page
       .locator(".card .card-title")
       .allTextContents();
-    expect(namesOnNextPage).not.toEqual(initialNames);
-    await expect(prevButtonContainer).not.toContainClass("disabled");
+     expect(namesOnNextPage).not.toEqual(initialNames);
+     await expect(page.locator(".page-item disabled")).not.toBeVisible();
     await handToolsPage.pagination_prevButton.click();
+     await expect(page.locator(".card")).not.toHaveCount(0);
+    await expect(page.locator(".pagination")).toBeVisible();
+    await expect(page.locator(".card-title").first()).toHaveText(initialNames[0]);
     expect(await page.locator(".card .card-title").allTextContents()).toEqual(
       initialNames,
     );
@@ -252,9 +266,13 @@ test.describe("4. Add a user and login as the user", () => {
     await headerPanel.profileMenuButton.click();
     await headerPanel.myProfileMenuButton.click();
     await expect(accountPage.firstName).toHaveValue(firstName);
+     
     await accountPage.firstName.fill(`updated${firstName}`);
     await accountPage.updateProfile.click();
+     await expect(accountPage.firstName).toHaveValue(`updated${firstName}`);
+    await page.waitForLoadState("networkidle")
     await page.reload();
     await expect(accountPage.firstName).toHaveValue(`updated${firstName}`);
+    
   });
 });

@@ -9,14 +9,13 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: "html",
+  reporter: [
+    ["html"]
+  ],
   use: {
     baseURL: process.env.URL || "https://practicesoftwaretesting.com/",
     trace: "on-first-retry",
     headless: false,
-    launchOptions: {
-      slowMo: 350,
-    },
   },
    
   projects: [

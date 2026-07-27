@@ -13,7 +13,7 @@ export class CheckoutPage {
   constructor(readonly page: Page) {
     this.postCode = page.locator("[data-test='postal_code']");
     this.houseNumber = page.locator("[data-test='house_number']");
-    this.street = page.locator("[data-test='street']");
+    this.street = page.locator("#street");
     this.proceedToCheckoutButtonThree = page.locator("[data-test='proceed-3']");
     this.paymentMethod = page.locator("[data-test='payment-method']");
     this.confirmButton = page.locator("[data-test='finish']");
