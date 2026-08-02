@@ -1,28 +1,17 @@
-import { expect, test } from "@playwright/test";
-import { AccountPage } from "../PageObjects/AccountPage";
-import { CartPage } from "../PageObjects/CartPage";
-import { CheckoutPage } from "../PageObjects/CheckoutPage";
-import { HandToolsPage } from "../PageObjects/HandToolsPage";
-import { LoginPage } from "../PageObjects/LoginPage";
-import { ProductDetailPage } from "../PageObjects/ProductDetailPage";
-import { UsersPage } from "../PageObjects/UsersPage";
+import { expect } from "@playwright/test";
 import { CommonFunctions } from "../utils/CommonFunctions";
-import { HeaderPanel } from "../PageObjects/HeaderPanel";
+import { test } from "../PageObjects/setup/basePage";
 
 // ─── 1. View Product Details ──────────────────────────────────────────────────
 
 const commonFunctions = new CommonFunctions();
 const token = commonFunctions.getAuthToken(
-  "playwright/.auth/practicesoftwaretesting-state.json",
+  "auth/standardState.json",
 );
 
 test.describe("1. View Product Details", () => {
-  test("access a product and view its details", async ({ page }) => {
-    const handToolsPage = new HandToolsPage(page);
-    const productDetailPage = new ProductDetailPage(page);
-
+  test("access a product and view its details", async ({ page,handToolsPage,headerPanel,productDetailPage }) => {
     await page.goto("/");
-    const headerPanel = new HeaderPanel(page);
     await headerPanel.categoriesMenuButton.click();
     await headerPanel.handToolsMenuButton.click();
     await handToolsPage.clickProduct("Combination Pliers");
@@ -58,13 +47,9 @@ test.describe("1. View Product Details", () => {
 
 test.describe("2. View invoice after purchase", () => {
   test("customer purchases a product with cash on delivery and views invoice", async ({
-    page,
+    page,headerPanel,handToolsPage,productDetailPage,cartPage,checkoutPage
   }) => {
-    const handToolsPage = new HandToolsPage(page);
-    const productDetailPage = new ProductDetailPage(page);
-    const cartPage = new CartPage(page);
-    const checkoutPage = new CheckoutPage(page);
-    const headerPanel = new HeaderPanel(page);
+   
     await page.goto("/");
     await headerPanel.categoriesMenuButton.click();
     const responsePromise= page.waitForResponse(response=>response.url().includes("/products") && response.request().method()==="QUERY")
@@ -90,7 +75,6 @@ for(let i=0;i<handToolsOnPage.length;i+=1){
     //checkout page
     await checkoutPage.postCode.fill("SL1 6EP");
     await checkoutPage.houseNumber.fill("1");
-    const commonFunctions = new CommonFunctions();
     const streetName =
       "street - "+ (await commonFunctions.generateStreetName(10));
 
@@ -135,16 +119,13 @@ for(let i=0;i<handToolsOnPage.length;i+=1){
 
 test.describe("3. Filter products and pagination", () => {
   test("category filter updates the product list and pagination works", async ({
-    page,
+    page,handToolsPage,headerPanel
   }) => {
-    const handToolsPage = new HandToolsPage(page);
-    const headerPanel = new HeaderPanel(page);
     await page.goto("/");
     await headerPanel.categoriesMenuButton.click();
     await headerPanel.handToolsMenuButton.click();
     await expect(page.locator(".card-title")).not.toHaveCount(0);
     await expect(page.locator(".pagination")).toBeVisible();
-  
 
     //these are items before filter is applied
     const initialNames = await page
@@ -218,13 +199,8 @@ test.describe("3. Filter products and pagination", () => {
 
 test.describe("4. Add a user and login as the user", () => {
   test("admin adds a new user and the new user can log in", async ({
-    page,
+    page,usersPage,loginPage,headerPanel,accountPage
   }) => {
-    const usersPage = new UsersPage(page);
-    const loginPage = new LoginPage(page);
-    const headerPanel = new HeaderPanel(page);
-    const commonFunctions = new CommonFunctions();
-
     const randomValue = await commonFunctions.generateStreetName(10);
     const email = `user${randomValue}@example.com`;
     const password = `User@${randomValue}!`;
@@ -260,8 +236,6 @@ test.describe("4. Add a user and login as the user", () => {
     //login with correct password and verify that login succeeds
     await loginPage.login(email, password);
     await expect(page).toHaveURL(/account/);
-
-    const accountPage = new AccountPage(page);
     await expect(headerPanel.profileMenuButton).toContainText(firstName);
     await headerPanel.profileMenuButton.click();
     await headerPanel.myProfileMenuButton.click();

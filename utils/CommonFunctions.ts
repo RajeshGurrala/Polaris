@@ -7,6 +7,5 @@ export class CommonFunctions {
 
 getAuthToken(storageStateFilePath: string): string {
   const storageState = JSON.parse(readFileSync(storageStateFilePath, "utf-8"));
-  const tokenItem = storageState.origins?.[0]?.localStorage?.find((i: any) => i.name === "auth-token");
-  return tokenItem.value;
+  return storageState.origins?.[0]?.localStorage?.find((i:any) => i.name === "auth-token").value;
 }}

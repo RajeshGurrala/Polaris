@@ -1,4 +1,4 @@
-import { chromium, FullConfig } from "@playwright/test";
+import { chromium } from "@playwright/test";
 import { LoginPage } from "../LoginPage";
 
 const CREDENTIALS = {
@@ -9,24 +9,20 @@ const CREDENTIALS = {
 const SITES = [
   {
     baseURL: "https://practicesoftwaretesting.com",
-    storageStateFile: "playwright/.auth/practicesoftwaretesting-state.json",
+    storageStateFile: "auth/standardState.json",
   },
   {
     baseURL: "https://with-bugs.practicesoftwaretesting.com/#",
-    storageStateFile: "playwright/.auth/with-bugs-state.json",
+    storageStateFile: "auth/withBugs.json",
   },
 ];
 
-async function globalSetup(config: FullConfig) {
-  const browser = await chromium.launch({
-    headless: false,
-    channel: "chrome",
-    args: ["--start-maximized"],
-  });
+export default async function globalSetup() {
+  const browser = await chromium.launch();
 
 
   for (const site of SITES) {
-    const context = await browser.newContext({ viewport: null });
+    const context = await browser.newContext({viewport:null});
     const page = await context.newPage();
     const loginPage = new LoginPage(page);
     await page.goto(`${site.baseURL}/auth/login`);
@@ -39,4 +35,4 @@ async function globalSetup(config: FullConfig) {
   await browser.close();
 }
 
-export default globalSetup;
+

@@ -16,6 +16,7 @@ export default defineConfig({
     baseURL: process.env.URL || "https://practicesoftwaretesting.com/",
     trace: "on-first-retry",
     headless: false,
+   
   },
    
   projects: [
@@ -24,7 +25,11 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         baseURL: "https://practicesoftwaretesting.com/",
-        storageState: "playwright/.auth/practicesoftwaretesting-state.json",
+        storageState: "auth/standardState.json",
+         launchOptions:{
+      channel:"chrome",
+      args:["--start-maximized"]
+    }
       },
     },
     {
@@ -32,7 +37,11 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         baseURL: "https://with-bugs.practicesoftwaretesting.com/",
-        storageState: "playwright/.auth/with-bugs-state.json",
+        storageState: "auth/withBugs.json",
+         launchOptions:{
+      channel:"chrome",
+      args:["--start-maximized"]
+    }
       },
     },
   ],

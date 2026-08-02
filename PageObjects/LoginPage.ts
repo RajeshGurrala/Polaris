@@ -8,8 +8,8 @@ export class LoginPage {
   }
 
   async login(email: string, password: string) {
-    await this.page.fill("[data-test='email']", email);
-    await this.page.fill("[data-test='password']", password);
+    await this.page.locator("[data-test='email']").fill (email);
+    await this.page.locator("[data-test='password']").fill(password);
     await this.page.click("[data-test='login-submit']");
   }
 }
